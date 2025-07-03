@@ -40,7 +40,6 @@ jobs:
         run: |
           DEPENDENCY_NAME="axios"
           VERSION=$(jq -r ".dependencies[\"$DEPENDENCY_NAME\"] // .devDependencies[\"$DEPENDENCY_NAME\"]" package.json)
-          echo "Versión instalada de $DEPENDENCY_NAME: $VERSION"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Print results
@@ -51,7 +50,12 @@ jobs:
             echo "❌ La dependencia NO está instalada."
           fi
 
-      - name: Print project name
+      - name: Read and send project info to API
+        if: steps.check_dependency.outputs.found == 'true'
         run: |
           PROJECT_NAME=$(jq -r .name package.json)
-          echo "📦 Nombre del proyecto: $PROJECT_NAME"
+          DEP_VERSION=${{ steps.get_version.outputs.version }}
+          echo "🔁 Enviando nombre y versión a la API..."
+          curl -X POST https://3ec8-2800-486-990-5300-9819-4655-136c-a392.ngrok-free.app/proyectos \
+            -H "Content-Type: application/json" \
+            -d "{\"nombre\": \"${PROJECT_NAME}\", \"version\": \"${DEP_VERSION}\"}"
