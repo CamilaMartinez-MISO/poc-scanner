@@ -1,0 +1,57 @@
+name: Report package.json on PR
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - main
+
+jobs:
+  report-package-json:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
+      - name: Read package.json
+        id: read_package
+        run: |
+          PACKAGE_JSON=$(cat package.json | jq -c .)
+          echo "package_json=$PACKAGE_JSON" >> $GITHUB_OUTPUT
+
+      - name: Check for dependency
+        id: check_dependency
+        run: |
+          DEPENDENCY_NAME="axios"
+          if jq -e ".dependencies[\"$DEPENDENCY_NAME\"] // .devDependencies[\"$DEPENDENCY_NAME\"]" package.json > /dev/null; then
+            echo "found=true" >> $GITHUB_OUTPUT
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Get dependency version
+        if: steps.check_dependency.outputs.found == 'true'
+        id: get_version
+        run: |
+          DEPENDENCY_NAME="axios"
+          VERSION=$(jq -r ".dependencies[\"$DEPENDENCY_NAME\"] // .devDependencies[\"$DEPENDENCY_NAME\"]" package.json)
+          echo "Versión instalada de $DEPENDENCY_NAME: $VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Print results
+        run: |
+          if [ "${{ steps.check_dependency.outputs.found }}" = "true" ]; then
+            echo "✅ La dependencia está instalada con versión: ${{ steps.get_version.outputs.version }}"
+          else
+            echo "❌ La dependencia NO está instalada."
+          fi
+
+      - name: Print project name
+        run: |
+          PROJECT_NAME=$(jq -r .name package.json)
+          echo "📦 Nombre del proyecto: $PROJECT_NAME"
