@@ -18,44 +18,17 @@ jobs:
       - name: Install jq
         run: sudo apt-get install -y jq
 
-      - name: Read package.json
-        id: read_package
+      - name: Read project info and send to API
         run: |
-          PACKAGE_JSON=$(cat package.json | jq -c .)
-          echo "package_json=$PACKAGE_JSON" >> $GITHUB_OUTPUT
-
-      - name: Check for dependency
-        id: check_dependency
-        run: |
-          DEPENDENCY_NAME="axios"
-          if jq -e ".dependencies[\"$DEPENDENCY_NAME\"] // .devDependencies[\"$DEPENDENCY_NAME\"]" package.json > /dev/null; then
-            echo "found=true" >> $GITHUB_OUTPUT
-          else
-            echo "found=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Get dependency version
-        if: steps.check_dependency.outputs.found == 'true'
-        id: get_version
-        run: |
-          DEPENDENCY_NAME="axios"
-          VERSION=$(jq -r ".dependencies[\"$DEPENDENCY_NAME\"] // .devDependencies[\"$DEPENDENCY_NAME\"]" package.json)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Print results
-        run: |
-          if [ "${{ steps.check_dependency.outputs.found }}" = "true" ]; then
-            echo "✅ La dependencia está instalada con versión: ${{ steps.get_version.outputs.version }}"
-          else
-            echo "❌ La dependencia NO está instalada."
-          fi
-
-      - name: Read and send project info to API
-        if: steps.check_dependency.outputs.found == 'true'
-        run: |
+          DEP="axios"
           PROJECT_NAME=$(jq -r .name package.json)
-          DEP_VERSION=${{ steps.get_version.outputs.version }}
-          echo "🔁 Enviando nombre y versión a la API..."
-          curl -X POST https://3ec8-2800-486-990-5300-9819-4655-136c-a392.ngrok-free.app/proyectos \
-            -H "Content-Type: application/json" \
-            -d "{\"nombre\": \"${PROJECT_NAME}\", \"version\": \"${DEP_VERSION}\"}"
+          VERSION=$(jq -r ".dependencies[\"$DEP\"] // .devDependencies[\"$DEP\"]" package.json)
+
+          if [ "$VERSION" != "null" ]; then
+            echo "✅ $DEP está en el proyecto con versión: $VERSION"
+            curl -X POST https://3ec8-2800-486-990-5300-9819-4655-136c-a392.ngrok-free.app/proyectos \
+              -H "Content-Type: application/json" \
+              -d "{\"nombre\": \"${PROJECT_NAME}\", \"version\": \"${VERSION}\"}"
+          else
+            echo "❌ $DEP no está instalado. No se enviará nada."
+          fi
