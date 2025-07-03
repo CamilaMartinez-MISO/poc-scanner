@@ -44,10 +44,10 @@ jobs:
       - name: Paso 2 - Enviar rama
         id: rama
         run: |
-          echo "🔹 Enviando rama: $BRANCH_NAME"
+          echo "🔹 Enviando rama: $BASE_BRANCH_NAME"
           RESPONSE=$(curl -s -X POST https://c6ff-2800-486-990-5300-9819-4655-136c-a392.ngrok-free.app/rama \
             -H "Content-Type: application/json" \
-            -d "{\"nombre\": \"${BRANCH_NAME}\", \"proyectoId\": ${PROJECT_ID}}")
+            -d "{\"nombre\": \"${BASE_BRANCH_NAME}\", \"proyectoId\": ${PROJECT_ID}}")
           echo "Respuesta: $RESPONSE"
           RAMA_ID=$(echo "$RESPONSE" | jq -r '.id')
           echo "RAMA_ID=$RAMA_ID" >> $GITHUB_ENV
