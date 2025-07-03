@@ -33,7 +33,7 @@ jobs:
         id: proyecto
         run: |
           echo "🔹 Enviando proyecto: $PROJECT_NAME"
-          RESPONSE=$(curl -s -X POST https://c6ff-2800-486-990-5300-9819-4655-136c-a392.ngrok-free.app//proyecto \
+          RESPONSE=$(curl -s -X POST https://c6ff-2800-486-990-5300-9819-4655-136c-a392.ngrok-free.app//proyectos \
             -H "Content-Type: application/json" \
             -d "{\"nombre\": \"${PROJECT_NAME}\"}")
           echo "Respuesta: $RESPONSE"
