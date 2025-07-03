@@ -15,43 +15,47 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Install jq
-        run: sudo apt-get install -y jq
+      - name: Install dependencies
+        run: sudo apt-get install -y jq curl
 
-      - name: Read package.json
-        id: read_package
+      - name: Definir variables
+        id: vars
         run: |
-          PACKAGE_JSON=$(cat package.json | jq -c .)
-          echo "package_json=$PACKAGE_JSON" >> $GITHUB_OUTPUT
-
-      - name: Check for dependency
-        id: check_dependency
-        run: |
-          DEPENDENCY_NAME="axios"
-          if jq -e ".dependencies[\"$DEPENDENCY_NAME\"] // .devDependencies[\"$DEPENDENCY_NAME\"]" package.json > /dev/null; then
-            echo "found=true" >> $GITHUB_OUTPUT
-          else
-            echo "found=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Get dependency version
-        if: steps.check_dependency.outputs.found == 'true'
-        id: get_version
-        run: |
-          DEPENDENCY_NAME="axios"
-          VERSION=$(jq -r ".dependencies[\"$DEPENDENCY_NAME\"] // .devDependencies[\"$DEPENDENCY_NAME\"]" package.json)
-          echo "Versión instalada de $DEPENDENCY_NAME: $VERSION"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Print results
-        run: |
-          if [ "${{ steps.check_dependency.outputs.found }}" = "true" ]; then
-            echo "✅ La dependencia está instalada con versión: ${{ steps.get_version.outputs.version }}"
-          else
-            echo "❌ La dependencia NO está instalada."
-          fi
-
-      - name: Print project name
-        run: |
+          DEP="axios"
           PROJECT_NAME=$(jq -r .name package.json)
-          echo "📦 Nombre del proyecto: $PROJECT_NAME"
+          VERSION=$(jq -r ".dependencies[\"$DEP\"] // .devDependencies[\"$DEP\"]" package.json)
+          BASE_BRANCH_NAME=$GITHUB_BASE_REF
+
+          echo "PROJECT_NAME=$PROJECT_NAME" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "BASE_BRANCH_NAME=$BASE_BRANCH_NAME" >> $GITHUB_ENV
+
+      - name: Paso 1 - Enviar proyecto
+        id: proyecto
+        run: |
+          echo "🔹 Enviando proyecto: $PROJECT_NAME"
+          RESPONSE=$(curl -s -X POST https://1c8e-204-199-71-91.ngrok-free.app/proyectos \
+            -H "Content-Type: application/json" \
+            -d "{\"nombre\": \"${PROJECT_NAME}\"}")
+          echo "Respuesta: $RESPONSE"
+          PROJECT_ID=$(echo "$RESPONSE" | jq -r '.id')
+          echo "PROJECT_ID=$PROJECT_ID" >> $GITHUB_ENV
+
+      - name: Paso 2 - Enviar rama
+        id: rama
+        run: |
+          echo "🔹 Enviando rama: $BASE_BRANCH_NAME"
+          RESPONSE=$(curl -s -X POST https://1c8e-204-199-71-91.ngrok-free.app/rama \
+            -H "Content-Type: application/json" \
+            -d "{\"nombre\": \"${BASE_BRANCH_NAME}\", \"proyectoId\": ${PROJECT_ID}}")
+          echo "Respuesta: $RESPONSE"
+          RAMA_ID=$(echo "$RESPONSE" | jq -r '.id')
+          echo "RAMA_ID=$RAMA_ID" >> $GITHUB_ENV
+
+      - name: Paso 3 - Enviar versión
+        id: version
+        run: |
+          echo "🔹 Enviando versión: $VERSION"
+          curl -s -X POST https://1c8e-204-199-71-91.ngrok-free.app/version \
+            -H "Content-Type: application/json" \
+            -d "{\"numeroVersion\": \"${VERSION}\", \"proyectoId\": ${PROJECT_ID}, \"ramaId\": ${RAMA_ID}}"
