@@ -15,20 +15,46 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Install jq
-        run: sudo apt-get install -y jq
+      - name: Install dependencies
+        run: sudo apt-get install -y jq curl
 
-      - name: Read project info and send to API
+      - name: Definir variables
+        id: vars
         run: |
           DEP="axios"
           PROJECT_NAME=$(jq -r .name package.json)
           VERSION=$(jq -r ".dependencies[\"$DEP\"] // .devDependencies[\"$DEP\"]" package.json)
+          BRANCH_NAME=$(echo "${GITHUB_REF#refs/heads/}" | sed 's|/|-|g')
+          echo "PROJECT_NAME=$PROJECT_NAME" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
 
-          if [ "$VERSION" != "null" ]; then
-            echo "✅ $DEP está en el proyecto con versión: $VERSION"
-            curl -X POST https://3ec8-2800-486-990-5300-9819-4655-136c-a392.ngrok-free.app/proyectos \
-              -H "Content-Type: application/json" \
-              -d "{\"nombre\": \"${PROJECT_NAME}\", \"version\": \"${VERSION}\"}"
-          else
-            echo "❌ $DEP no está instalado. No se enviará nada."
-          fi
+      - name: Paso 1 - Enviar proyecto
+        id: proyecto
+        run: |
+          echo "🔹 Enviando proyecto: $PROJECT_NAME"
+          RESPONSE=$(curl -s -X POST https://<tu-ngrok>.ngrok-free.app/proyecto \
+            -H "Content-Type: application/json" \
+            -d "{\"nombre\": \"${PROJECT_NAME}\"}")
+          echo "Respuesta: $RESPONSE"
+          PROJECT_ID=$(echo "$RESPONSE" | jq -r '.id')
+          echo "PROJECT_ID=$PROJECT_ID" >> $GITHUB_ENV
+
+      - name: Paso 2 - Enviar rama
+        id: rama
+        run: |
+          echo "🔹 Enviando rama: $BRANCH_NAME"
+          RESPONSE=$(curl -s -X POST https://<tu-ngrok>.ngrok-free.app/rama \
+            -H "Content-Type: application/json" \
+            -d "{\"nombre\": \"${BRANCH_NAME}\", \"proyectoId\": ${PROJECT_ID}}")
+          echo "Respuesta: $RESPONSE"
+          RAMA_ID=$(echo "$RESPONSE" | jq -r '.id')
+          echo "RAMA_ID=$RAMA_ID" >> $GITHUB_ENV
+
+      - name: Paso 3 - Enviar versión
+        id: version
+        run: |
+          echo "🔹 Enviando versión: $VERSION"
+          curl -s -X POST https://<tu-ngrok>.ngrok-free.app/version \
+            -H "Content-Type: application/json" \
+            -d "{\"numeroVersion\": \"${VERSION}\", \"proyectoId\": ${PROJECT_ID}, \"ramaId\": ${RAMA_ID}}"
