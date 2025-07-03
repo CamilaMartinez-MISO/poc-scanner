@@ -24,7 +24,8 @@ jobs:
           DEP="axios"
           PROJECT_NAME=$(jq -r .name package.json)
           VERSION=$(jq -r ".dependencies[\"$DEP\"] // .devDependencies[\"$DEP\"]" package.json)
-          BRANCH_NAME=$(echo "${GITHUB_REF#refs/heads/}" | sed 's|/|-|g')
+          BRANCH_NAME=$GITHUB_HEAD_REF
+
           echo "PROJECT_NAME=$PROJECT_NAME" >> $GITHUB_ENV
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
