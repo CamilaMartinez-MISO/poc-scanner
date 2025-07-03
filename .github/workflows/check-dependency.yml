@@ -24,11 +24,11 @@ jobs:
           DEP="axios"
           PROJECT_NAME=$(jq -r .name package.json)
           VERSION=$(jq -r ".dependencies[\"$DEP\"] // .devDependencies[\"$DEP\"]" package.json)
-          BRANCH_NAME=$GITHUB_HEAD_REF
+          BASE_BRANCH_NAME=$GITHUB_BASE_REF
 
           echo "PROJECT_NAME=$PROJECT_NAME" >> $GITHUB_ENV
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+          echo "BASE_BRANCH_NAME=$BASE_BRANCH_NAME" >> $GITHUB_ENV
 
       - name: Paso 1 - Enviar proyecto
         id: proyecto
